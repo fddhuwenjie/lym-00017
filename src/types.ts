@@ -54,7 +54,7 @@ export interface ImageSimilarityResult {
   file1: string;
   file2: string;
   similarity: number;
-  algorithm: 'phash' | 'dhash';
+  algorithm: 'phash' | 'dhash' | 'combined';
 }
 
 export interface NearDuplicateGroup {

@@ -125,6 +125,43 @@ export class NearDuplicateDetector {
     return bits.join('');
   }
 
+  async computeImageColorSignature(imagePath: string): Promise<{ r: number; g: number; b: number; variance: number }> {
+    const image = await Jimp.read(imagePath);
+    const w = image.bitmap.width;
+    const h = image.bitmap.height;
+
+    let totalR = 0, totalG = 0, totalB = 0;
+    const pixels: { r: number; g: number; b: number }[] = [];
+    const step = Math.max(1, Math.floor(w * h / 1000));
+    let count = 0;
+
+    for (let y = 0; y < h; y += Math.max(1, Math.floor(h / 32))) {
+      for (let x = 0; x < w; x += Math.max(1, Math.floor(w / 32))) {
+        const color = Jimp.intToRGBA(image.getPixelColor(x, y));
+        totalR += color.r;
+        totalG += color.g;
+        totalB += color.b;
+        pixels.push({ r: color.r, g: color.g, b: color.b });
+        count++;
+      }
+    }
+
+    const avgR = totalR / count;
+    const avgG = totalG / count;
+    const avgB = totalB / count;
+
+    let variance = 0;
+    for (const p of pixels) {
+      const dr = p.r - avgR;
+      const dg = p.g - avgG;
+      const db = p.b - avgB;
+      variance += (dr * dr + dg * dg + db * db) / 3;
+    }
+    variance = Math.sqrt(variance / count) / 255;
+
+    return { r: avgR, g: avgG, b: avgB, variance };
+  }
+
   private hammingDistance(hash1: string, hash2: string): number {
     let distance = 0;
     for (let i = 0; i < hash1.length; i++) {
@@ -133,20 +170,58 @@ export class NearDuplicateDetector {
     return distance;
   }
 
+  private colorDistance(c1: { r: number; g: number; b: number }, c2: { r: number; g: number; b: number }): number {
+    const dr = c1.r - c2.r;
+    const dg = c1.g - c2.g;
+    const db = c1.b - c2.b;
+    return Math.sqrt(dr * dr + dg * dg + db * db) / 441.67;
+  }
+
   async computeImageSimilarity(file1: string, file2: string): Promise<ImageSimilarityResult> {
-    const [hash1, hash2] = await Promise.all([
+    const [hash1, hash2, color1, color2] = await Promise.all([
       this.computeImageDHash(file1),
       this.computeImageDHash(file2),
+      this.computeImageColorSignature(file1),
+      this.computeImageColorSignature(file2),
     ]);
 
-    const distance = this.hammingDistance(hash1, hash2);
-    const similarity = 1 - distance / 64;
+    const dhashDistance = this.hammingDistance(hash1, hash2);
+    const dhashSimilarity = 1 - dhashDistance / 64;
+    const colorDiff = this.colorDistance(color1, color2);
+    const colorSimilarity = 1 - colorDiff;
+
+    const isFlat1 = color1.variance < 0.02;
+    const isFlat2 = color2.variance < 0.02;
+    const isLowVariance = color1.variance < 0.05 || color2.variance < 0.05;
+    const maxVariance = Math.max(color1.variance, color2.variance);
+
+    let similarity: number;
+    let algorithm: 'dhash' | 'combined';
+
+    if (isFlat1 && isFlat2) {
+      similarity = colorSimilarity;
+      algorithm = 'combined';
+    } else if (isLowVariance) {
+      const varianceFactor = maxVariance / 0.05;
+      const dhashWeight = Math.max(0.1, varianceFactor * 0.5);
+      const colorWeight = 1 - dhashWeight;
+      similarity = dhashSimilarity * dhashWeight + colorSimilarity * colorWeight;
+      similarity = Math.min(similarity, colorSimilarity + 0.1);
+      algorithm = 'combined';
+    } else {
+      similarity = dhashSimilarity * 0.6 + colorSimilarity * 0.4;
+      algorithm = 'combined';
+    }
+
+    if (colorDiff > 0.2) {
+      similarity = Math.min(similarity, 1 - colorDiff * 0.8);
+    }
 
     return {
       file1,
       file2,
       similarity: Math.max(0, Math.min(1, similarity)),
-      algorithm: 'dhash',
+      algorithm,
     };
   }
 

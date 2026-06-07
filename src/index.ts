@@ -79,7 +79,7 @@ async function runDedupe(dir: string, options: CLIOptions & { gitignore?: boolea
     options: options as unknown as Record<string, unknown>,
   };
 
-  let exactResult = undefined;
+  let exactResult: Awaited<ReturnType<ExactDeduplicator['findDuplicates']>> | undefined = undefined;
   if (options.exact) {
     console.log(chalk.yellow('\n🔍 [2/4] 检测精确重复文件...'));
     const deduplicator = new ExactDeduplicator({
@@ -101,7 +101,18 @@ async function runDedupe(dir: string, options: CLIOptions & { gitignore?: boolea
       concurrency: options.concurrency,
     });
 
-    nearResult = await nearDetector.findNearDuplicates(scanResult.files);
+    const exactDuplicatePaths = new Set<string>();
+    if (exactResult && exactResult.groups.length > 0) {
+      for (const group of exactResult.groups) {
+        for (const file of group.files) {
+          exactDuplicatePaths.add(file.path);
+        }
+      }
+      console.log(chalk.gray(`   已排除 ${exactDuplicatePaths.size} 个精确重复文件，避免重复检测`));
+    }
+
+    const filesForNearDetect = scanResult.files.filter(f => !exactDuplicatePaths.has(f.path));
+    nearResult = await nearDetector.findNearDuplicates(filesForNearDetect);
     reportData.nearDuplicates = nearResult;
 
     printNearDuplicateStats(nearResult);

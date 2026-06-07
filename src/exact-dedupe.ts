@@ -26,7 +26,7 @@ export class ExactDeduplicator {
 
   async hashFile(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const hash = crypto.createHash('sha256');
+      const hash = crypto.createHash(this.options.algorithm);
       const stream = fs.createReadStream(filePath, { highWaterMark: this.options.chunkSize });
 
       stream.on('data', (chunk) => {
@@ -45,7 +45,7 @@ export class ExactDeduplicator {
 
   async quickHashFile(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const hash = crypto.createHash('sha256');
+      const hash = crypto.createHash(this.options.algorithm);
       let bytesRead = 0;
       const stream = fs.createReadStream(filePath, { highWaterMark: 4096 });
 
