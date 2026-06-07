@@ -7,6 +7,53 @@ export interface FileInfo {
   atime: Date;
   ctime: Date;
   depth: number;
+  sourceRoot?: string;
+  contentHash?: string;
+  approximateFingerprint?: string;
+  mediaType?: 'video' | 'audio' | 'image' | 'text' | 'other';
+  mediaFingerprint?: string;
+}
+
+export interface IndexEntry {
+  path: string;
+  size: number;
+  mtime: number;
+  contentHash: string;
+  approximateFingerprint?: string;
+  mediaFingerprint?: string;
+  indexedAt: number;
+}
+
+export interface IndexStats {
+  totalEntries: number;
+  lastUpdatedAt: number;
+  createdAt: number;
+  hitCount: number;
+  missCount: number;
+  hitRate: number;
+  rootDirs: string[];
+}
+
+export interface FileIndex {
+  version: number;
+  createdAt: number;
+  lastUpdatedAt: number;
+  rootDirs: string[];
+  entries: Record<string, IndexEntry>;
+  stats: {
+    hitCount: number;
+    missCount: number;
+  };
+}
+
+export type MediaType = 'video' | 'audio' | 'image' | 'text' | 'other';
+
+export interface MediaSimilarityResult {
+  file1: string;
+  file2: string;
+  similarity: number;
+  algorithm: 'video-dhash' | 'audio-energy' | 'combined';
+  mediaType: 'video' | 'audio';
 }
 
 export interface ScanStats {
@@ -21,6 +68,7 @@ export interface ScanResult {
   files: FileInfo[];
   stats: ScanStats;
   ignoredCount: number;
+  indexStats?: IndexStats;
 }
 
 export interface HashResult {
@@ -34,13 +82,17 @@ export interface ExactDuplicateGroup {
   size: number;
   files: FileInfo[];
   wastedSpace: number;
+  isCrossDirectory: boolean;
 }
 
 export interface ExactDuplicateResult {
   groups: ExactDuplicateGroup[];
   totalDuplicateFiles: number;
   totalWastedSpace: number;
+  crossDirectoryWastedSpace: number;
+  intraDirectoryWastedSpace: number;
   hashTime: number;
+  indexStats?: IndexStats;
 }
 
 export interface TextSimilarityResult {
@@ -59,21 +111,25 @@ export interface ImageSimilarityResult {
 
 export interface NearDuplicateGroup {
   id: string;
-  type: 'text' | 'image';
-  files: { path: string; similarity: number }[];
+  type: 'text' | 'image' | 'video' | 'audio';
+  files: { path: string; similarity: number; sourceRoot?: string }[];
   avgSimilarity: number;
 }
 
 export interface NearDuplicateResult {
   textGroups: NearDuplicateGroup[];
   imageGroups: NearDuplicateGroup[];
+  videoGroups: NearDuplicateGroup[];
+  audioGroups: NearDuplicateGroup[];
   totalTextPairs: number;
   totalImagePairs: number;
+  totalVideoPairs: number;
+  totalAudioPairs: number;
   similarityTime: number;
 }
 
 export interface KeepRule {
-  type: 'mtime' | 'depth' | 'name' | 'path';
+  type: 'mtime' | 'depth' | 'name' | 'path' | 'prefer_dir';
   value: string | number;
   description: string;
 }
@@ -115,9 +171,13 @@ export interface CLIOptions {
   extensions?: string;
   threshold?: string | number;
   similarityThreshold?: number;
-  autoKeepRule?: 'mtime_newest' | 'mtime_oldest' | 'depth_shallowest' | 'path_shortest' | 'name_pattern';
+  autoKeepRule?: 'mtime_newest' | 'mtime_oldest' | 'depth_shallowest' | 'path_shortest' | 'name_pattern' | 'prefer_dir';
   dryRun?: boolean;
   gitignore?: boolean;
   nonInteractive?: boolean;
   concurrency?: number;
+  rebuildIndex?: boolean;
+  showIndexStats?: boolean;
+  preferDir?: string;
+  dirs?: string[];
 }

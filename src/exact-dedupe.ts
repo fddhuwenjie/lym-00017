@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import { FileInfo, ExactDuplicateGroup, ExactDuplicateResult, HashResult } from './types';
+import { FileInfo, ExactDuplicateGroup, ExactDuplicateResult, HashResult, IndexStats } from './types';
 import { groupFilesBySize } from './scanner';
 
 export interface HashOptions {
@@ -85,7 +85,12 @@ export class ExactDeduplicator {
       while (queue.length > 0) {
         const file = queue.shift()!;
         try {
-          const hash = await this.hashFile(file.path);
+          let hash: string;
+          if (file.contentHash) {
+            hash = file.contentHash;
+          } else {
+            hash = await this.hashFile(file.path);
+          }
           results.push({
             path: file.path,
             hash,
@@ -103,7 +108,17 @@ export class ExactDeduplicator {
     return results;
   }
 
-  async findDuplicates(files: FileInfo[]): Promise<ExactDuplicateResult> {
+  private isCrossDirectoryGroup(files: FileInfo[]): boolean {
+    const sourceRoots = new Set<string>();
+    for (const file of files) {
+      if (file.sourceRoot) {
+        sourceRoots.add(file.sourceRoot);
+      }
+    }
+    return sourceRoots.size > 1;
+  }
+
+  async findDuplicates(files: FileInfo[], indexStats?: IndexStats): Promise<ExactDuplicateResult> {
     const startTime = Date.now();
 
     const sizeGroups = groupFilesBySize(files);
@@ -120,7 +135,10 @@ export class ExactDeduplicator {
         groups: [],
         totalDuplicateFiles: 0,
         totalWastedSpace: 0,
+        crossDirectoryWastedSpace: 0,
+        intraDirectoryWastedSpace: 0,
         hashTime: Date.now() - startTime,
+        indexStats,
       };
     }
 
@@ -141,17 +159,27 @@ export class ExactDeduplicator {
     const groups: ExactDuplicateGroup[] = [];
     let totalDuplicateFiles = 0;
     let totalWastedSpace = 0;
+    let crossDirectoryWastedSpace = 0;
+    let intraDirectoryWastedSpace = 0;
 
     for (const [hash, groupFiles] of hashGroups) {
       if (groupFiles.length >= 2) {
         const size = groupFiles[0].size;
         const wastedSpace = size * (groupFiles.length - 1);
+        const isCrossDirectory = this.isCrossDirectoryGroup(groupFiles);
+
+        if (isCrossDirectory) {
+          crossDirectoryWastedSpace += wastedSpace;
+        } else {
+          intraDirectoryWastedSpace += wastedSpace;
+        }
 
         groups.push({
           hash,
           size,
           files: groupFiles.sort((a, b) => a.mtime.getTime() - b.mtime.getTime()),
           wastedSpace,
+          isCrossDirectory,
         });
 
         totalDuplicateFiles += groupFiles.length;
@@ -165,7 +193,10 @@ export class ExactDeduplicator {
       groups,
       totalDuplicateFiles,
       totalWastedSpace,
+      crossDirectoryWastedSpace,
+      intraDirectoryWastedSpace,
       hashTime: Date.now() - startTime,
+      indexStats,
     };
   }
 
@@ -207,6 +238,8 @@ export class ExactDeduplicator {
         groups: [],
         totalDuplicateFiles: 0,
         totalWastedSpace: 0,
+        crossDirectoryWastedSpace: 0,
+        intraDirectoryWastedSpace: 0,
         hashTime: Date.now() - startTime,
       };
     }

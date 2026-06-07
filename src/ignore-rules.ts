@@ -55,9 +55,15 @@ export class IgnoreRules {
   }
 
   getPatterns(): string[] {
-    return (this.ig as unknown as { rules: { origin: string }[] }).rules
-      .map(r => r.origin)
-      .filter(Boolean);
+    try {
+      const rules = (this.ig as unknown as { rules?: { origin?: string }[] }).rules;
+      if (!rules) return [];
+      return rules
+        .map(r => r.origin)
+        .filter(Boolean) as string[];
+    } catch {
+      return [];
+    }
   }
 }
 
@@ -76,5 +82,7 @@ export function defaultIgnorePatterns(): string[] {
     '*.pyo',
     '*.class',
     '*.jar',
+    '.file-dedupe-index.jsonl',
+    '.file-dedupe-index.json',
   ];
 }

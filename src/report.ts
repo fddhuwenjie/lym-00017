@@ -50,6 +50,13 @@ export class ReportExporter {
     return JSON.stringify(serializable, null, 2);
   }
 
+  private getSourceLabel(file: FileInfo): string {
+    if (file.sourceRoot) {
+      return ` [${path.basename(file.sourceRoot)}]`;
+    }
+    return '';
+  }
+
   toMarkdown(): string {
     const lines: string[] = [];
 
@@ -58,6 +65,11 @@ export class ReportExporter {
     lines.push(`- **生成时间**: ${this.data.generatedAt}`);
     lines.push(`- **扫描目录**: ${this.data.scan.stats.rootDir}`);
     lines.push(`- **扫描耗时**: ${this.data.scan.stats.scanTime} ms`);
+    
+    if (this.data.scan.indexStats) {
+      lines.push(`- **索引命中率**: ${(this.data.scan.indexStats.hitRate * 100).toFixed(2)}% (${this.data.scan.indexStats.hitCount} 命中 / ${this.data.scan.indexStats.missCount} 未命中)`);
+    }
+    
     lines.push('');
 
     lines.push('## 1. 文件统计');
@@ -88,7 +100,13 @@ export class ReportExporter {
       lines.push('');
       lines.push(`- **重复文件总数**: ${this.data.exactDuplicates.totalDuplicateFiles.toLocaleString()}`);
       lines.push(`- **重复组数**: ${this.data.exactDuplicates.groups.length.toLocaleString()}`);
-      lines.push(`- **可释放空间**: ${formatBytes(this.data.exactDuplicates.totalWastedSpace)}`);
+      lines.push(`- **总可释放空间**: ${formatBytes(this.data.exactDuplicates.totalWastedSpace)}`);
+      
+      if (this.data.exactDuplicates.crossDirectoryWastedSpace !== undefined) {
+        lines.push(`- **跨目录重复可释放**: ${formatBytes(this.data.exactDuplicates.crossDirectoryWastedSpace)}`);
+        lines.push(`- **目录内重复可释放**: ${formatBytes(this.data.exactDuplicates.intraDirectoryWastedSpace)}`);
+      }
+      
       lines.push(`- **哈希计算耗时**: ${this.data.exactDuplicates.hashTime} ms`);
       lines.push('');
 
@@ -98,19 +116,25 @@ export class ReportExporter {
 
         for (let i = 0; i < Math.min(this.data.exactDuplicates.groups.length, 50); i++) {
           const group = this.data.exactDuplicates.groups[i];
-          lines.push(`#### 组 ${i + 1} - ${formatBytes(group.wastedSpace)} 可释放`);
+          const crossTag = group.isCrossDirectory ? ' ⚠️ **跨目录**' : '';
+          lines.push(`#### 组 ${i + 1} - ${formatBytes(group.wastedSpace)} 可释放${crossTag}`);
           lines.push('');
           lines.push(`- **哈希值**: ${group.hash}`);
           lines.push(`- **文件大小**: ${formatBytes(group.size)}`);
           lines.push(`- **文件数**: ${group.files.length}`);
+          if (group.isCrossDirectory) {
+            const sources = new Set(group.files.map(f => f.sourceRoot || 'unknown'));
+            lines.push(`- **来源目录**: ${Array.from(sources).join(', ')}`);
+          }
           lines.push('');
-          lines.push('| # | 文件路径 | 修改时间 | 操作 |');
-          lines.push('|---|----------|----------|------|');
+          lines.push('| # | 文件路径 | 来源目录 | 修改时间 | 操作 |');
+          lines.push('|---|----------|----------|----------|------|');
 
           for (let j = 0; j < group.files.length; j++) {
             const file = group.files[j];
             const action = j === 0 ? '保留' : '删除';
-            lines.push(`| ${j + 1} | ${this.escapeMarkdown(file.path)} | ${file.mtime.toLocaleString()} | ${action} |`);
+            const source = file.sourceRoot ? path.basename(file.sourceRoot) : '-';
+            lines.push(`| ${j + 1} | ${this.escapeMarkdown(file.path)} | ${source} | ${file.mtime.toLocaleString()} | ${action} |`);
           }
           lines.push('');
         }
@@ -128,8 +152,13 @@ export class ReportExporter {
       lines.push(`- **相似度计算耗时**: ${this.data.nearDuplicates.similarityTime} ms`);
       lines.push('');
 
-      if (this.data.nearDuplicates.textGroups.length > 0) {
-        lines.push('### 文本近似重复');
+      const hasText = this.data.nearDuplicates.textGroups.length > 0;
+      const hasImage = this.data.nearDuplicates.imageGroups.length > 0;
+      const hasVideo = (this.data.nearDuplicates.videoGroups?.length || 0) > 0;
+      const hasAudio = (this.data.nearDuplicates.audioGroups?.length || 0) > 0;
+
+      if (hasText) {
+        lines.push('### 📝 文本近似重复');
         lines.push('');
         lines.push(`- **文本组数**: ${this.data.nearDuplicates.textGroups.length}`);
         lines.push(`- **涉及文件数**: ${this.data.nearDuplicates.totalTextPairs}`);
@@ -139,18 +168,19 @@ export class ReportExporter {
           const group = this.data.nearDuplicates.textGroups[i];
           lines.push(`#### 文本组 ${i + 1} - 平均相似度 ${(group.avgSimilarity * 100).toFixed(1)}%`);
           lines.push('');
-          lines.push('| 文件路径 | 相似度 |');
-          lines.push('|----------|--------|');
+          lines.push('| 文件路径 | 来源目录 | 相似度 |');
+          lines.push('|----------|----------|--------|');
 
           for (const file of group.files) {
-            lines.push(`| ${this.escapeMarkdown(file.path)} | ${(file.similarity * 100).toFixed(1)}% |`);
+            const source = file.sourceRoot ? path.basename(file.sourceRoot) : '-';
+            lines.push(`| ${this.escapeMarkdown(file.path)} | ${source} | ${(file.similarity * 100).toFixed(1)}% |`);
           }
           lines.push('');
         }
       }
 
-      if (this.data.nearDuplicates.imageGroups.length > 0) {
-        lines.push('### 图像近似重复');
+      if (hasImage) {
+        lines.push('### 🖼️  图像近似重复');
         lines.push('');
         lines.push(`- **图像组数**: ${this.data.nearDuplicates.imageGroups.length}`);
         lines.push(`- **涉及文件数**: ${this.data.nearDuplicates.totalImagePairs}`);
@@ -160,14 +190,64 @@ export class ReportExporter {
           const group = this.data.nearDuplicates.imageGroups[i];
           lines.push(`#### 图像组 ${i + 1} - 平均相似度 ${(group.avgSimilarity * 100).toFixed(1)}%`);
           lines.push('');
-          lines.push('| 文件路径 | 相似度 |');
-          lines.push('|----------|--------|');
+          lines.push('| 文件路径 | 来源目录 | 相似度 |');
+          lines.push('|----------|----------|--------|');
 
           for (const file of group.files) {
-            lines.push(`| ${this.escapeMarkdown(file.path)} | ${(file.similarity * 100).toFixed(1)}% |`);
+            const source = file.sourceRoot ? path.basename(file.sourceRoot) : '-';
+            lines.push(`| ${this.escapeMarkdown(file.path)} | ${source} | ${(file.similarity * 100).toFixed(1)}% |`);
           }
           lines.push('');
         }
+      }
+
+      if (hasVideo && this.data.nearDuplicates.videoGroups) {
+        lines.push('### 🎬 视频近似重复');
+        lines.push('');
+        lines.push(`- **视频组数**: ${this.data.nearDuplicates.videoGroups.length}`);
+        lines.push(`- **涉及文件数**: ${this.data.nearDuplicates.totalVideoPairs}`);
+        lines.push('');
+
+        for (let i = 0; i < Math.min(this.data.nearDuplicates.videoGroups.length, 20); i++) {
+          const group = this.data.nearDuplicates.videoGroups[i];
+          lines.push(`#### 视频组 ${i + 1} - 平均相似度 ${(group.avgSimilarity * 100).toFixed(1)}%`);
+          lines.push('');
+          lines.push('| 文件路径 | 来源目录 | 相似度 |');
+          lines.push('|----------|----------|--------|');
+
+          for (const file of group.files) {
+            const source = file.sourceRoot ? path.basename(file.sourceRoot) : '-';
+            lines.push(`| ${this.escapeMarkdown(file.path)} | ${source} | ${(file.similarity * 100).toFixed(1)}% |`);
+          }
+          lines.push('');
+        }
+      }
+
+      if (hasAudio && this.data.nearDuplicates.audioGroups) {
+        lines.push('### 🎵 音频近似重复');
+        lines.push('');
+        lines.push(`- **音频组数**: ${this.data.nearDuplicates.audioGroups.length}`);
+        lines.push(`- **涉及文件数**: ${this.data.nearDuplicates.totalAudioPairs}`);
+        lines.push('');
+
+        for (let i = 0; i < Math.min(this.data.nearDuplicates.audioGroups.length, 20); i++) {
+          const group = this.data.nearDuplicates.audioGroups[i];
+          lines.push(`#### 音频组 ${i + 1} - 平均相似度 ${(group.avgSimilarity * 100).toFixed(1)}%`);
+          lines.push('');
+          lines.push('| 文件路径 | 来源目录 | 相似度 |');
+          lines.push('|----------|----------|--------|');
+
+          for (const file of group.files) {
+            const source = file.sourceRoot ? path.basename(file.sourceRoot) : '-';
+            lines.push(`| ${this.escapeMarkdown(file.path)} | ${source} | ${(file.similarity * 100).toFixed(1)}% |`);
+          }
+          lines.push('');
+        }
+      }
+
+      if (!hasText && !hasImage && !hasVideo && !hasAudio) {
+        lines.push('✅ 没有发现近似重复的文件');
+        lines.push('');
       }
     }
 
@@ -281,6 +361,26 @@ export class ReportExporter {
       margin-bottom: 15px;
       border: 1px solid #fed7d7;
     }
+    .duplicate-group.cross-dir {
+      background: #fef5ff;
+      border-color: #e9d8fd;
+    }
+    .duplicate-group.video {
+      background: #ebf8ff;
+      border-color: #bee3f8;
+    }
+    .duplicate-group.audio {
+      background: #f0fff4;
+      border-color: #c6f6d5;
+    }
+    .duplicate-group.text {
+      background: #f7fafc;
+      border-color: #e2e8f0;
+    }
+    .duplicate-group.image {
+      background: #faf5ff;
+      border-color: #d6bcfa;
+    }
     .group-header {
       display: flex;
       justify-content: space-between;
@@ -291,6 +391,14 @@ export class ReportExporter {
     }
     .group-title { font-weight: 600; color: #c53030; }
     .group-size { color: #742a2a; font-weight: 500; }
+    .cross-badge {
+      background: #805ad5;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-left: 8px;
+    }
     .keep { color: #2f855a; font-weight: 600; }
     .delete { color: #c53030; font-weight: 600; }
     .hash {
@@ -347,6 +455,14 @@ export class ReportExporter {
       height: 100%;
       background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
     }
+    .source-tag {
+      background: #edf2f7;
+      color: #4a5568;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      margin-left: 4px;
+    }
   </style>
 </head>
 <body>
@@ -355,6 +471,7 @@ export class ReportExporter {
       <h1>📁 文件去重分析报告</h1>
       <div class="meta">
         生成时间: ${this.data.generatedAt} | 扫描目录: ${this.escapeHTML(this.data.scan.stats.rootDir)}
+        ${this.data.scan.indexStats ? ` | 索引命中率: ${(this.data.scan.indexStats.hitRate * 100).toFixed(2)}%` : ''}
       </div>
     </div>
     <div class="content">
@@ -379,6 +496,11 @@ export class ReportExporter {
             <div class="label">扫描耗时</div>
             <div class="value">${this.data.scan.stats.scanTime} ms</div>
           </div>
+          ${this.data.scan.indexStats ? `
+          <div class="stat-card" style="border-left-color: #38a169;">
+            <div class="label">索引命中率</div>
+            <div class="value" style="color: #38a169;">${(this.data.scan.indexStats.hitRate * 100).toFixed(2)}%</div>
+          </div>` : ''}
         </div>
 
         <h3>按扩展名分布</h3>
@@ -423,16 +545,28 @@ export class ReportExporter {
             <div class="value">${this.data.exactDuplicates.groups.length.toLocaleString()}</div>
           </div>
           <div class="stat-card" style="border-left-color: #c53030;">
-            <div class="label">可释放空间</div>
+            <div class="label">总可释放空间</div>
             <div class="value" style="color: #c53030;">${formatBytes(this.data.exactDuplicates.totalWastedSpace)}</div>
           </div>
+          ${this.data.exactDuplicates.crossDirectoryWastedSpace !== undefined ? `
+          <div class="stat-card" style="border-left-color: #805ad5;">
+            <div class="label">跨目录可释放</div>
+            <div class="value" style="color: #805ad5;">${formatBytes(this.data.exactDuplicates.crossDirectoryWastedSpace)}</div>
+          </div>
+          <div class="stat-card" style="border-left-color: #3182ce;">
+            <div class="label">目录内可释放</div>
+            <div class="value" style="color: #3182ce;">${formatBytes(this.data.exactDuplicates.intraDirectoryWastedSpace)}</div>
+          </div>` : ''}
         </div>
 
         ${this.data.exactDuplicates.groups.length > 0 ? `
-          ${this.data.exactDuplicates.groups.slice(0, 50).map((group, idx) => `
-          <div class="duplicate-group">
+          ${this.data.exactDuplicates.groups.slice(0, 50).map((group, idx) => {
+            const crossClass = group.isCrossDirectory ? 'cross-dir' : '';
+            const crossBadge = group.isCrossDirectory ? '<span class="cross-badge">跨目录</span>' : '';
+            return `
+          <div class="duplicate-group ${crossClass}">
             <div class="group-header">
-              <span class="group-title">组 ${idx + 1}</span>
+              <span class="group-title">组 ${idx + 1}${crossBadge}</span>
               <span class="group-size">${formatBytes(group.wastedSpace)} 可释放</span>
             </div>
             <div><span class="hash">${group.hash}</span></div>
@@ -444,6 +578,7 @@ export class ReportExporter {
                 <tr>
                   <th>#</th>
                   <th>文件路径</th>
+                  <th>来源</th>
                   <th>修改时间</th>
                   <th>操作</th>
                 </tr>
@@ -453,12 +588,14 @@ export class ReportExporter {
                 <tr>
                   <td>${j + 1}</td>
                   <td><code>${this.escapeHTML(file.path)}</code></td>
+                  <td>${file.sourceRoot ? `<span class="source-tag">${this.escapeHTML(path.basename(file.sourceRoot))}</span>` : '-'}</td>
                   <td>${file.mtime.toLocaleString()}</td>
                   <td><span class="${j === 0 ? 'keep' : 'delete'}">${j === 0 ? '✓ 保留' : '✗ 删除'}</span></td>
                 </tr>`).join('')}
               </tbody>
             </table>
-          </div>`).join('')}
+          </div>`;
+          }).join('')}
 
           ${this.data.exactDuplicates.groups.length > 50 ? `
           <div class="warning">
@@ -477,7 +614,7 @@ export class ReportExporter {
         ${this.data.nearDuplicates.textGroups.length > 0 ? `
         <h3>📝 文本近似重复 (${this.data.nearDuplicates.textGroups.length} 组)</h3>
         ${this.data.nearDuplicates.textGroups.slice(0, 20).map((group, idx) => `
-        <div class="duplicate-group" style="background: #f7fafc; border-color: #bee3f8;">
+        <div class="duplicate-group text">
           <div class="group-header">
             <span class="group-title" style="color: #2b6cb0;">文本组 ${idx + 1}</span>
             <span class="group-size" style="color: #2c5282;">平均相似度 ${(group.avgSimilarity * 100).toFixed(1)}%</span>
@@ -486,6 +623,7 @@ export class ReportExporter {
             <thead>
               <tr>
                 <th>文件路径</th>
+                <th>来源</th>
                 <th>相似度</th>
               </tr>
             </thead>
@@ -495,6 +633,7 @@ export class ReportExporter {
                 return `
                 <tr>
                   <td><code>${this.escapeHTML(file.path)}</code></td>
+                  <td>${file.sourceRoot ? `<span class="source-tag">${this.escapeHTML(path.basename(file.sourceRoot))}</span>` : '-'}</td>
                   <td><span class="similarity ${simClass}">${(file.similarity * 100).toFixed(1)}%</span></td>
                 </tr>`;
               }).join('')}
@@ -506,7 +645,7 @@ export class ReportExporter {
         ${this.data.nearDuplicates.imageGroups.length > 0 ? `
         <h3>🖼️ 图像近似重复 (${this.data.nearDuplicates.imageGroups.length} 组)</h3>
         ${this.data.nearDuplicates.imageGroups.slice(0, 20).map((group, idx) => `
-        <div class="duplicate-group" style="background: #faf5ff; border-color: #d6bcfa;">
+        <div class="duplicate-group image">
           <div class="group-header">
             <span class="group-title" style="color: #805ad5;">图像组 ${idx + 1}</span>
             <span class="group-size" style="color: #553c9a;">平均相似度 ${(group.avgSimilarity * 100).toFixed(1)}%</span>
@@ -515,6 +654,7 @@ export class ReportExporter {
             <thead>
               <tr>
                 <th>文件路径</th>
+                <th>来源</th>
                 <th>相似度</th>
               </tr>
             </thead>
@@ -524,6 +664,7 @@ export class ReportExporter {
                 return `
                 <tr>
                   <td><code>${this.escapeHTML(file.path)}</code></td>
+                  <td>${file.sourceRoot ? `<span class="source-tag">${this.escapeHTML(path.basename(file.sourceRoot))}</span>` : '-'}</td>
                   <td><span class="similarity ${simClass}">${(file.similarity * 100).toFixed(1)}%</span></td>
                 </tr>`;
               }).join('')}
@@ -532,7 +673,72 @@ export class ReportExporter {
         </div>`).join('')}
         ` : ''}
 
-        ${this.data.nearDuplicates.textGroups.length === 0 && this.data.nearDuplicates.imageGroups.length === 0 ? `
+        ${(this.data.nearDuplicates.videoGroups?.length || 0) > 0 ? `
+        <h3>🎬 视频近似重复 (${this.data.nearDuplicates.videoGroups!.length} 组)</h3>
+        ${this.data.nearDuplicates.videoGroups!.slice(0, 20).map((group, idx) => `
+        <div class="duplicate-group video">
+          <div class="group-header">
+            <span class="group-title" style="color: #2b6cb0;">视频组 ${idx + 1}</span>
+            <span class="group-size" style="color: #2c5282;">平均相似度 ${(group.avgSimilarity * 100).toFixed(1)}%</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>文件路径</th>
+                <th>来源</th>
+                <th>相似度</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.files.map(file => {
+                const simClass = file.similarity >= 0.95 ? 'sim-high' : file.similarity >= 0.85 ? 'sim-medium' : 'sim-low';
+                return `
+                <tr>
+                  <td><code>${this.escapeHTML(file.path)}</code></td>
+                  <td>${file.sourceRoot ? `<span class="source-tag">${this.escapeHTML(path.basename(file.sourceRoot))}</span>` : '-'}</td>
+                  <td><span class="similarity ${simClass}">${(file.similarity * 100).toFixed(1)}%</span></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`).join('')}
+        ` : ''}
+
+        ${(this.data.nearDuplicates.audioGroups?.length || 0) > 0 ? `
+        <h3>🎵 音频近似重复 (${this.data.nearDuplicates.audioGroups!.length} 组)</h3>
+        ${this.data.nearDuplicates.audioGroups!.slice(0, 20).map((group, idx) => `
+        <div class="duplicate-group audio">
+          <div class="group-header">
+            <span class="group-title" style="color: #276749;">音频组 ${idx + 1}</span>
+            <span class="group-size" style="color: #22543d;">平均相似度 ${(group.avgSimilarity * 100).toFixed(1)}%</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>文件路径</th>
+                <th>来源</th>
+                <th>相似度</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.files.map(file => {
+                const simClass = file.similarity >= 0.95 ? 'sim-high' : file.similarity >= 0.85 ? 'sim-medium' : 'sim-low';
+                return `
+                <tr>
+                  <td><code>${this.escapeHTML(file.path)}</code></td>
+                  <td>${file.sourceRoot ? `<span class="source-tag">${this.escapeHTML(path.basename(file.sourceRoot))}</span>` : '-'}</td>
+                  <td><span class="similarity ${simClass}">${(file.similarity * 100).toFixed(1)}%</span></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`).join('')}
+        ` : ''}
+
+        ${this.data.nearDuplicates.textGroups.length === 0 && 
+          this.data.nearDuplicates.imageGroups.length === 0 && 
+          (this.data.nearDuplicates.videoGroups?.length || 0) === 0 && 
+          (this.data.nearDuplicates.audioGroups?.length || 0) === 0 ? `
         <div class="success">
           ✅ 没有发现近似重复的文件
         </div>` : ''}

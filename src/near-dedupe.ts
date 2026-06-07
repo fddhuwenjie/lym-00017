@@ -2,12 +2,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import leven from 'leven';
 import Jimp from 'jimp';
-import { FileInfo, NearDuplicateResult, NearDuplicateGroup, TextSimilarityResult, ImageSimilarityResult } from './types';
+import { FileInfo, NearDuplicateResult, NearDuplicateGroup, TextSimilarityResult, ImageSimilarityResult, MediaSimilarityResult } from './types';
+import { MediaFingerprinter, DEFAULT_VIDEO_EXTENSIONS, DEFAULT_AUDIO_EXTENSIONS } from './media-fingerprint';
 
 export interface NearDuplicateOptions {
   similarityThreshold?: number;
   textExtensions?: string[];
   imageExtensions?: string[];
+  videoExtensions?: string[];
+  audioExtensions?: string[];
   maxTextSize?: number;
   maxImageDimension?: number;
   blockSize?: number;
@@ -28,17 +31,21 @@ const DEFAULT_IMAGE_EXTENSIONS = [
 
 export class NearDuplicateDetector {
   private options: Required<NearDuplicateOptions>;
+  private mediaFingerprinter: MediaFingerprinter;
 
   constructor(options: NearDuplicateOptions = {}) {
     this.options = {
       similarityThreshold: options.similarityThreshold ?? 0.85,
       textExtensions: options.textExtensions || DEFAULT_TEXT_EXTENSIONS,
       imageExtensions: options.imageExtensions || DEFAULT_IMAGE_EXTENSIONS,
+      videoExtensions: options.videoExtensions || DEFAULT_VIDEO_EXTENSIONS,
+      audioExtensions: options.audioExtensions || DEFAULT_AUDIO_EXTENSIONS,
       maxTextSize: options.maxTextSize || 10 * 1024 * 1024,
       maxImageDimension: options.maxImageDimension || 2048,
       blockSize: options.blockSize || 100,
       concurrency: options.concurrency || 2,
     };
+    this.mediaFingerprinter = new MediaFingerprinter();
   }
 
   isTextFile(file: FileInfo): boolean {
@@ -47,6 +54,26 @@ export class NearDuplicateDetector {
 
   isImageFile(file: FileInfo): boolean {
     return this.options.imageExtensions.includes(file.extension.toLowerCase());
+  }
+
+  isVideoFile(file: FileInfo): boolean {
+    return this.options.videoExtensions.includes(file.extension.toLowerCase());
+  }
+
+  isAudioFile(file: FileInfo): boolean {
+    return this.options.audioExtensions.includes(file.extension.toLowerCase());
+  }
+
+  isMediaFile(file: FileInfo): boolean {
+    return this.isVideoFile(file) || this.isAudioFile(file);
+  }
+
+  getMediaType(file: FileInfo): 'text' | 'image' | 'video' | 'audio' | 'other' {
+    if (this.isTextFile(file)) return 'text';
+    if (this.isImageFile(file)) return 'image';
+    if (this.isVideoFile(file)) return 'video';
+    if (this.isAudioFile(file)) return 'audio';
+    return 'other';
   }
 
   async readTextFile(filePath: string): Promise<string> {
@@ -225,25 +252,85 @@ export class NearDuplicateDetector {
     };
   }
 
+  async computeVideoSimilarity(file1: string, file2: string): Promise<MediaSimilarityResult | null> {
+    try {
+      const [fp1, fp2] = await Promise.all([
+        file1 ? this.mediaFingerprinter.generateVideoFingerprint(file1) : null,
+        file2 ? this.mediaFingerprinter.generateVideoFingerprint(file2) : null,
+      ]);
+
+      if (!fp1 || !fp2) {
+        return null;
+      }
+
+      const similarity = this.mediaFingerprinter.computeMediaSimilarity(fp1, fp2);
+
+      return {
+        file1,
+        file2,
+        similarity,
+        algorithm: 'video-dhash',
+        mediaType: 'video',
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async computeAudioSimilarity(file1: string, file2: string): Promise<MediaSimilarityResult | null> {
+    try {
+      const [fp1, fp2] = await Promise.all([
+        file1 ? this.mediaFingerprinter.generateAudioFingerprint(file1) : null,
+        file2 ? this.mediaFingerprinter.generateAudioFingerprint(file2) : null,
+      ]);
+
+      if (!fp1 || !fp2) {
+        return null;
+      }
+
+      const similarity = this.mediaFingerprinter.computeMediaSimilarity(fp1, fp2);
+
+      return {
+        file1,
+        file2,
+        similarity,
+        algorithm: 'audio-energy',
+        mediaType: 'audio',
+      };
+    } catch {
+      return null;
+    }
+  }
+
   async findNearDuplicates(files: FileInfo[]): Promise<NearDuplicateResult> {
     const startTime = Date.now();
 
     const textFiles = files.filter(f => this.isTextFile(f) && f.size <= this.options.maxTextSize);
     const imageFiles = files.filter(f => this.isImageFile(f));
+    const videoFiles = files.filter(f => this.isVideoFile(f));
+    const audioFiles = files.filter(f => this.isAudioFile(f));
 
-    const [textGroups, imageGroups] = await Promise.all([
+    const [textGroups, imageGroups, videoGroups, audioGroups] = await Promise.all([
       this.findTextNearDuplicates(textFiles),
       this.findImageNearDuplicates(imageFiles),
+      this.findVideoNearDuplicates(videoFiles),
+      this.findAudioNearDuplicates(audioFiles),
     ]);
 
     const totalTextPairs = textGroups.reduce((sum, g) => sum + g.files.length, 0);
     const totalImagePairs = imageGroups.reduce((sum, g) => sum + g.files.length, 0);
+    const totalVideoPairs = videoGroups.reduce((sum, g) => sum + g.files.length, 0);
+    const totalAudioPairs = audioGroups.reduce((sum, g) => sum + g.files.length, 0);
 
     return {
       textGroups,
       imageGroups,
+      videoGroups,
+      audioGroups,
       totalTextPairs,
       totalImagePairs,
+      totalVideoPairs,
+      totalAudioPairs,
       similarityTime: Date.now() - startTime,
     };
   }
@@ -301,6 +388,54 @@ export class NearDuplicateDetector {
     return this.clusterSimilarityPairs(similarityPairs, 'image');
   }
 
+  private async findVideoNearDuplicates(files: FileInfo[]): Promise<NearDuplicateGroup[]> {
+    const similarityPairs: MediaSimilarityResult[] = [];
+
+    const sizeGroups = this.groupBySizeRange(files, 0.3);
+    for (const group of sizeGroups) {
+      if (group.length < 2) continue;
+
+      for (let i = 0; i < group.length - 1; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          try {
+            const result = await this.computeVideoSimilarity(group[i].path, group[j].path);
+            if (result && result.similarity >= this.options.similarityThreshold) {
+              similarityPairs.push(result);
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+    }
+
+    return this.clusterMediaSimilarityPairs(similarityPairs, 'video');
+  }
+
+  private async findAudioNearDuplicates(files: FileInfo[]): Promise<NearDuplicateGroup[]> {
+    const similarityPairs: MediaSimilarityResult[] = [];
+
+    const sizeGroups = this.groupBySizeRange(files, 0.3);
+    for (const group of sizeGroups) {
+      if (group.length < 2) continue;
+
+      for (let i = 0; i < group.length - 1; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          try {
+            const result = await this.computeAudioSimilarity(group[i].path, group[j].path);
+            if (result && result.similarity >= this.options.similarityThreshold) {
+              similarityPairs.push(result);
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+    }
+
+    return this.clusterMediaSimilarityPairs(similarityPairs, 'audio');
+  }
+
   private groupBySizeRange(files: FileInfo[], tolerance: number): FileInfo[][] {
     const sorted = [...files].sort((a, b) => a.size - b.size);
     const groups: FileInfo[][] = [];
@@ -343,7 +478,71 @@ export class NearDuplicateDetector {
     pairs: (TextSimilarityResult | ImageSimilarityResult)[],
     type: 'text' | 'image'
   ): NearDuplicateGroup[] {
-    const adjacency = new Map<string, { path: string; similarity: number }[]>();
+    const adjacency = new Map<string, { path: string; similarity: number; sourceRoot?: string }[]>();
+
+    for (const pair of pairs) {
+      if (!adjacency.has(pair.file1)) {
+        adjacency.set(pair.file1, []);
+      }
+      if (!adjacency.has(pair.file2)) {
+        adjacency.set(pair.file2, []);
+      }
+      adjacency.get(pair.file1)!.push({ path: pair.file2, similarity: pair.similarity });
+      adjacency.get(pair.file2)!.push({ path: pair.file1, similarity: pair.similarity });
+    }
+
+    const visited = new Set<string>();
+    const groups: NearDuplicateGroup[] = [];
+    let groupId = 0;
+
+    for (const file of adjacency.keys()) {
+      if (visited.has(file)) continue;
+
+      const queue = [file];
+      const cluster = new Map<string, number>();
+
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        if (visited.has(current)) continue;
+        visited.add(current);
+
+        const neighbors = adjacency.get(current) || [];
+        for (const { path: neighbor, similarity } of neighbors) {
+          if (!visited.has(neighbor)) {
+            queue.push(neighbor);
+          }
+          const existing = cluster.get(neighbor) || 0;
+          if (similarity > existing) {
+            cluster.set(neighbor, similarity);
+          }
+        }
+        cluster.set(current, 1.0);
+      }
+
+      if (cluster.size >= 2) {
+        const files = Array.from(cluster.entries())
+          .map(([path, similarity]) => ({ path, similarity }))
+          .sort((a, b) => b.similarity - a.similarity);
+
+        const avgSimilarity = files.reduce((sum, f) => sum + f.similarity, 0) / files.length;
+
+        groups.push({
+          id: `${type}-${groupId++}`,
+          type,
+          files,
+          avgSimilarity,
+        });
+      }
+    }
+
+    return groups.sort((a, b) => b.avgSimilarity - a.avgSimilarity);
+  }
+
+  private clusterMediaSimilarityPairs(
+    pairs: MediaSimilarityResult[],
+    type: 'video' | 'audio'
+  ): NearDuplicateGroup[] {
+    const adjacency = new Map<string, { path: string; similarity: number; sourceRoot?: string }[]>();
 
     for (const pair of pairs) {
       if (!adjacency.has(pair.file1)) {

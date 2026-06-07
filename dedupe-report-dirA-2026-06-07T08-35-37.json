@@ -1,0 +1,323 @@
+{
+  "scan": {
+    "files": [
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\documents\\data.json",
+        "name": "data.json",
+        "size": 91,
+        "extension": ".json",
+        "mtime": "2026-06-07T08:34:47.596Z",
+        "atime": "2026-06-07T08:35:28.254Z",
+        "ctime": "2026-06-07T08:34:47.596Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "f427b904b008c003c9ad0800c9b8cd444a518b64e1565a450be6a3f2578e1f74"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\documents\\report.txt",
+        "name": "report.txt",
+        "size": 346,
+        "extension": ".txt",
+        "mtime": "2026-06-07T08:34:47.592Z",
+        "atime": "2026-06-07T08:35:28.198Z",
+        "ctime": "2026-06-07T08:34:47.592Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "a43270d7159c5437907095e24629e1fe6049e80af60ed85b1f122389728eb581"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\documents\\report_copy.txt",
+        "name": "report_copy.txt",
+        "size": 346,
+        "extension": ".txt",
+        "mtime": "2026-06-07T08:34:47.593Z",
+        "atime": "2026-06-07T08:35:13.136Z",
+        "ctime": "2026-06-07T08:34:47.593Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "a43270d7159c5437907095e24629e1fe6049e80af60ed85b1f122389728eb581"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\documents\\report_similar.txt",
+        "name": "report_similar.txt",
+        "size": 353,
+        "extension": ".txt",
+        "mtime": "2026-06-07T08:34:47.594Z",
+        "atime": "2026-06-07T08:35:28.197Z",
+        "ctime": "2026-06-07T08:34:47.594Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "dd75c95c6c7755bc519aec8b3488d6cc064c9e455162a9887243f170887985a3"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\images\\landscape.png",
+        "name": "landscape.png",
+        "size": 20748,
+        "extension": ".png",
+        "mtime": "2026-06-07T08:34:47.698Z",
+        "atime": "2026-06-07T08:35:09.066Z",
+        "ctime": "2026-06-07T08:34:47.698Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "ecdcd4b15496cfcd37aa1584e0d52b0d3f839fb623e4b44d5f60fa0fa5b71efa"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\images\\photo.png",
+        "name": "photo.png",
+        "size": 20748,
+        "extension": ".png",
+        "mtime": "2026-06-07T08:34:47.644Z",
+        "atime": "2026-06-07T08:35:08.896Z",
+        "ctime": "2026-06-07T08:34:47.644Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "6a76ef394f5bf6f4e87f8adde1db7ff11d3f67d1a35b1c89cf8466f4b81c23d4"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\images\\photo_copy.png",
+        "name": "photo_copy.png",
+        "size": 20748,
+        "extension": ".png",
+        "mtime": "2026-06-07T08:34:47.662Z",
+        "atime": "2026-06-07T08:35:08.899Z",
+        "ctime": "2026-06-07T08:34:47.662Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "6a76ef394f5bf6f4e87f8adde1db7ff11d3f67d1a35b1c89cf8466f4b81c23d4"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\images\\photo_similar.png",
+        "name": "photo_similar.png",
+        "size": 20748,
+        "extension": ".png",
+        "mtime": "2026-06-07T08:34:47.683Z",
+        "atime": "2026-06-07T08:35:09.066Z",
+        "ctime": "2026-06-07T08:34:47.683Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "359ef8b60862eb4728cb02d334055bfe62e2ab7dd18a56cddbc8d1002e5ea558"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\media\\sample_audio.mp3",
+        "name": "sample_audio.mp3",
+        "size": 3145728,
+        "extension": ".mp3",
+        "mtime": "2026-06-07T08:34:47.934Z",
+        "atime": "2026-06-07T08:35:08.948Z",
+        "ctime": "2026-06-07T08:34:47.934Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "bab42af73c31e7a92988f7f5f37ce700b7e8042f682bee60b21cccb6cfe1d43c"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\media\\sample_audio_copy.mp3",
+        "name": "sample_audio_copy.mp3",
+        "size": 3145728,
+        "extension": ".mp3",
+        "mtime": "2026-06-07T08:34:47.963Z",
+        "atime": "2026-06-07T08:35:08.952Z",
+        "ctime": "2026-06-07T08:34:47.963Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "cee8bfd1102527fa6f540175a8c976a660a50ac9a66c72a20d5eb8d6e95c88af"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\media\\sample_video.mp4",
+        "name": "sample_video.mp4",
+        "size": 5242880,
+        "extension": ".mp4",
+        "mtime": "2026-06-07T08:34:47.782Z",
+        "atime": "2026-06-07T08:35:08.957Z",
+        "ctime": "2026-06-07T08:34:47.782Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "8ad69ba9722ded6d3373a602f3e9a2d492ba21e8f0a4124cdac92083e85c0a3d"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\media\\sample_video_copy.mp4",
+        "name": "sample_video_copy.mp4",
+        "size": 5242880,
+        "extension": ".mp4",
+        "mtime": "2026-06-07T08:34:47.834Z",
+        "atime": "2026-06-07T08:35:08.999Z",
+        "ctime": "2026-06-07T08:34:47.834Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "7f37e4e4f4f402c170d21e5bb54b5b07f30b8a782bf4be22727b875106e1cd6e"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\.file-dedupe-index.jsonl",
+        "name": ".file-dedupe-index.jsonl",
+        "size": 3101,
+        "extension": ".jsonl",
+        "mtime": "2026-06-07T08:35:09.027Z",
+        "atime": "2026-06-07T08:35:37.790Z",
+        "ctime": "2026-06-07T08:35:09.027Z",
+        "depth": 0,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "4653b9531bd4ff6af73162d689e15d2566d9bfd50794876a3341a6f25eeb2417"
+      },
+      {
+        "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\documents\\notes.txt",
+        "name": "notes.txt",
+        "size": 144,
+        "extension": ".txt",
+        "mtime": "2026-06-07T08:35:22.216Z",
+        "atime": "2026-06-07T08:35:22.216Z",
+        "ctime": "2026-06-07T08:35:22.216Z",
+        "depth": 1,
+        "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+        "contentHash": "a94c57d169995831987ce238b7614e2e8e82372254c415ad65748b0c0cbe7a24"
+      }
+    ],
+    "stats": {
+      "totalFiles": 14,
+      "totalSize": 16864589,
+      "extensionStats": {
+        ".jsonl": {
+          "count": 1,
+          "size": 3101
+        },
+        ".json": {
+          "count": 1,
+          "size": 91
+        },
+        ".txt": {
+          "count": 4,
+          "size": 1189
+        },
+        ".png": {
+          "count": 4,
+          "size": 82992
+        },
+        ".mp3": {
+          "count": 2,
+          "size": 6291456
+        },
+        ".mp4": {
+          "count": 2,
+          "size": 10485760
+        }
+      },
+      "scanTime": 9,
+      "rootDir": "E:\\solo\\项目\\lym-00017\\test-data\\dirA"
+    },
+    "ignoredCount": 0,
+    "indexStats": {
+      "totalEntries": 13,
+      "lastUpdatedAt": 1780821309023,
+      "createdAt": 1780821309023,
+      "hitCount": 12,
+      "missCount": 2,
+      "hitRate": 0.8571428571428571,
+      "rootDirs": [
+        "E:\\solo\\项目\\lym-00017\\test-data\\dirA"
+      ]
+    }
+  },
+  "generatedAt": "2026-06-07T08:35:37.832Z",
+  "options": {
+    "gitignore": true,
+    "exact": true,
+    "report": "json",
+    "threshold": "85",
+    "concurrency": 4,
+    "near": true,
+    "showIndexStats": true
+  },
+  "exactDuplicates": {
+    "groups": [
+      {
+        "hash": "6a76ef394f5bf6f4e87f8adde1db7ff11d3f67d1a35b1c89cf8466f4b81c23d4",
+        "size": 20748,
+        "files": [
+          {
+            "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\images\\photo.png",
+            "name": "photo.png",
+            "size": 20748,
+            "extension": ".png",
+            "mtime": "2026-06-07T08:34:47.644Z",
+            "atime": "2026-06-07T08:35:08.896Z",
+            "ctime": "2026-06-07T08:34:47.644Z",
+            "depth": 1,
+            "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+            "contentHash": "6a76ef394f5bf6f4e87f8adde1db7ff11d3f67d1a35b1c89cf8466f4b81c23d4"
+          },
+          {
+            "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\images\\photo_copy.png",
+            "name": "photo_copy.png",
+            "size": 20748,
+            "extension": ".png",
+            "mtime": "2026-06-07T08:34:47.662Z",
+            "atime": "2026-06-07T08:35:08.899Z",
+            "ctime": "2026-06-07T08:34:47.662Z",
+            "depth": 1,
+            "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+            "contentHash": "6a76ef394f5bf6f4e87f8adde1db7ff11d3f67d1a35b1c89cf8466f4b81c23d4"
+          }
+        ],
+        "wastedSpace": 20748,
+        "isCrossDirectory": false
+      },
+      {
+        "hash": "a43270d7159c5437907095e24629e1fe6049e80af60ed85b1f122389728eb581",
+        "size": 346,
+        "files": [
+          {
+            "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\documents\\report.txt",
+            "name": "report.txt",
+            "size": 346,
+            "extension": ".txt",
+            "mtime": "2026-06-07T08:34:47.592Z",
+            "atime": "2026-06-07T08:35:28.198Z",
+            "ctime": "2026-06-07T08:34:47.592Z",
+            "depth": 1,
+            "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+            "contentHash": "a43270d7159c5437907095e24629e1fe6049e80af60ed85b1f122389728eb581"
+          },
+          {
+            "path": "E:\\solo\\项目\\lym-00017\\test-data\\dirA\\documents\\report_copy.txt",
+            "name": "report_copy.txt",
+            "size": 346,
+            "extension": ".txt",
+            "mtime": "2026-06-07T08:34:47.593Z",
+            "atime": "2026-06-07T08:35:13.136Z",
+            "ctime": "2026-06-07T08:34:47.593Z",
+            "depth": 1,
+            "sourceRoot": "E:\\solo\\项目\\lym-00017\\test-data\\dirA",
+            "contentHash": "a43270d7159c5437907095e24629e1fe6049e80af60ed85b1f122389728eb581"
+          }
+        ],
+        "wastedSpace": 346,
+        "isCrossDirectory": false
+      }
+    ],
+    "totalDuplicateFiles": 4,
+    "totalWastedSpace": 21094,
+    "crossDirectoryWastedSpace": 0,
+    "intraDirectoryWastedSpace": 21094,
+    "hashTime": 1,
+    "indexStats": {
+      "totalEntries": 13,
+      "lastUpdatedAt": 1780821309023,
+      "createdAt": 1780821309023,
+      "hitCount": 12,
+      "missCount": 2,
+      "hitRate": 0.8571428571428571,
+      "rootDirs": [
+        "E:\\solo\\项目\\lym-00017\\test-data\\dirA"
+      ]
+    }
+  },
+  "nearDuplicates": {
+    "textGroups": [],
+    "imageGroups": [],
+    "videoGroups": [],
+    "audioGroups": [],
+    "totalTextPairs": 0,
+    "totalImagePairs": 0,
+    "totalVideoPairs": 0,
+    "totalAudioPairs": 0,
+    "similarityTime": 90
+  }
+}

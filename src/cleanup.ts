@@ -14,7 +14,8 @@ export type AutoKeepRule =
   | 'mtime_oldest'
   | 'depth_shallowest'
   | 'path_shortest'
-  | 'name_pattern';
+  | 'name_pattern'
+  | 'prefer_dir';
 
 export interface CleanupOptions {
   autoKeepRule?: AutoKeepRule;
@@ -22,6 +23,7 @@ export interface CleanupOptions {
   interactive?: boolean;
   namePatterns?: string[];
   recursive?: boolean;
+  preferDir?: string;
 }
 
 export class FileCleaner {
@@ -34,6 +36,7 @@ export class FileCleaner {
       interactive: options.interactive ?? true,
       namePatterns: options.namePatterns || ['original', 'copy', 'backup', '副本'],
       recursive: options.recursive ?? false,
+      preferDir: options.preferDir || '',
     };
   }
 
@@ -69,6 +72,12 @@ export class FileCleaner {
           value: this.options.namePatterns.join('|'),
           description: '按文件名模式保留（避免删除包含 original/copy/backup 等字样的文件）',
         };
+      case 'prefer_dir':
+        return {
+          type: 'prefer_dir',
+          value: this.options.preferDir,
+          description: `优先保留来自 ${this.options.preferDir} 的文件`,
+        };
       default:
         return {
           type: 'mtime',
@@ -100,6 +109,22 @@ export class FileCleaner {
         const candidates = sorted.filter(f => hasPattern(f.name));
         if (candidates.length > 0) {
           return candidates.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())[0];
+        }
+        return sorted.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())[0];
+      }
+      case 'prefer_dir': {
+        const preferDir = (rule.value as string).toLowerCase();
+        const isInPreferDir = (file: FileInfo) => {
+          if (file.sourceRoot) {
+            return file.sourceRoot.toLowerCase() === preferDir ||
+                   file.path.toLowerCase().startsWith(preferDir);
+          }
+          return file.path.toLowerCase().startsWith(preferDir);
+        };
+
+        const preferCandidates = sorted.filter(f => isInPreferDir(f));
+        if (preferCandidates.length > 0) {
+          return preferCandidates.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())[0];
         }
         return sorted.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())[0];
       }
@@ -234,12 +259,31 @@ export class FileCleaner {
           { value: 'depth_shallowest', name: '保留路径最浅的文件' },
           { value: 'path_shortest', name: '保留路径最短的文件' },
           { value: 'name_pattern', name: '按文件名模式智能选择' },
+          { value: 'prefer_dir', name: '按来源目录优先级保留' },
         ],
         default: 'mtime_newest',
       },
     ]);
 
     this.options.autoKeepRule = answer.keepRule;
+
+    if (answer.keepRule === 'prefer_dir' && !this.options.preferDir) {
+      const dirAnswer = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'preferDir',
+          message: '请输入优先保留的目录路径：',
+          validate: (input: string) => {
+            if (!input.trim()) {
+              return '请输入有效的目录路径';
+            }
+            return true;
+          },
+        },
+      ]);
+      this.options.preferDir = dirAnswer.preferDir;
+    }
+
     return answer.keepRule;
   }
 
@@ -276,5 +320,9 @@ export class FileCleaner {
 
   setAutoKeepRule(rule: AutoKeepRule): void {
     this.options.autoKeepRule = rule;
+  }
+
+  setPreferDir(dir: string): void {
+    this.options.preferDir = dir;
   }
 }
