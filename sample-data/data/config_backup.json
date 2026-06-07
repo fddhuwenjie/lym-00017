@@ -1,0 +1,41 @@
+{
+  "name": "sample-dataset",
+  "version": "1.0.0",
+  "description": "A sample dataset for testing file deduplication",
+  "items": [
+    {
+      "id": 1,
+      "value": "Lorem ipsum",
+      "category": "text"
+    },
+    {
+      "id": 2,
+      "value": "dolor sit amet",
+      "category": "text"
+    },
+    {
+      "id": 3,
+      "value": "consectetur adipiscing",
+      "category": "text"
+    },
+    {
+      "id": 4,
+      "value": 42,
+      "category": "number"
+    },
+    {
+      "id": 5,
+      "value": true,
+      "category": "boolean"
+    }
+  ],
+  "metadata": {
+    "createdAt": "2026-06-07T07:12:25.975Z",
+    "author": "file-dedupe-cli",
+    "tags": [
+      "sample",
+      "test",
+      "deduplication"
+    ]
+  }
+}

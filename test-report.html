@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文件去重分析报告</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px 40px;
+    }
+    .header h1 { font-size: 28px; margin-bottom: 10px; }
+    .header .meta { opacity: 0.9; font-size: 14px; }
+    .content { padding: 30px 40px; }
+    .section { margin-bottom: 30px; }
+    .section h2 {
+      font-size: 20px;
+      color: #667eea;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e8e8e8;
+    }
+    .section h3 {
+      font-size: 16px;
+      color: #764ba2;
+      margin: 20px 0 10px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+      padding: 20px;
+      border-radius: 12px;
+      border-left: 4px solid #667eea;
+    }
+    .stat-card .label { font-size: 12px; color: #666; margin-bottom: 5px; }
+    .stat-card .value { font-size: 24px; font-weight: bold; color: #333; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e8e8e8;
+    }
+    th {
+      background: #f5f7fa;
+      font-weight: 600;
+      color: #555;
+    }
+    tr:hover { background: #fafafa; }
+    .duplicate-group {
+      background: #fff5f5;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 1px solid #fed7d7;
+    }
+    .group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #fed7d7;
+    }
+    .group-title { font-weight: 600; color: #c53030; }
+    .group-size { color: #742a2a; font-weight: 500; }
+    .keep { color: #2f855a; font-weight: 600; }
+    .delete { color: #c53030; font-weight: 600; }
+    .hash {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #666;
+      background: #f5f7fa;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .similarity {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .sim-high { background: #fed7d7; color: #c53030; }
+    .sim-medium { background: #feebc8; color: #c05621; }
+    .sim-low { background: #c6f6d5; color: #276749; }
+    .warning {
+      background: #fffaf0;
+      border: 1px solid #feebc8;
+      padding: 12px;
+      border-radius: 8px;
+      color: #c05621;
+      font-size: 13px;
+    }
+    .success {
+      background: #f0fff4;
+      border: 1px solid #c6f6d5;
+      padding: 12px;
+      border-radius: 8px;
+      color: #276749;
+      font-size: 13px;
+    }
+    pre {
+      background: #1a202c;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    code { font-family: 'Courier New', monospace; }
+    .ext-bar {
+      height: 8px;
+      background: #e8e8e8;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .ext-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📁 文件去重分析报告</h1>
+      <div class="meta">
+        生成时间: 2026-06-07T07:13:37.218Z | 扫描目录: E:\solo\项目\lym-00017\sample-data
+      </div>
+    </div>
+    <div class="content">
+
+      <div class="section">
+        <h2>📊 文件统计</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">总文件数</div>
+            <div class="value">30</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">总大小</div>
+            <div class="value">59.07 KB</div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="label">扫描耗时</div>
+            <div class="value">15 ms</div>
+          </div>
+        </div>
+
+        <h3>按扩展名分布</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>扩展名</th>
+              <th>文件数</th>
+              <th>总大小</th>
+              <th>占比</th>
+              <th style="width: 200px;">分布</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+                <tr>
+                  <td><code>.bin</code></td>
+                  <td>4</td>
+                  <td>40 KB</td>
+                  <td>67.72%</td>
+                  <td><div class="ext-bar"><div class="ext-bar-fill" style="width: 67.72038886317043%"></div></div></td>
+                </tr>
+                <tr>
+                  <td><code>.txt</code></td>
+                  <td>6</td>
+                  <td>9.16 KB</td>
+                  <td>15.51%</td>
+                  <td><div class="ext-bar"><div class="ext-bar-fill" style="width: 15.508233582435023%"></div></div></td>
+                </tr>
+                <tr>
+                  <td><code>.png</code></td>
+                  <td>7</td>
+                  <td>3.94 KB</td>
+                  <td>6.68%</td>
+                  <td><div class="ext-bar"><div class="ext-bar-fill" style="width: 6.677799087361946%"></div></div></td>
+                </tr>
+                <tr>
+                  <td><code>.json</code></td>
+                  <td>4</td>
+                  <td>2.9 KB</td>
+                  <td>4.91%</td>
+                  <td><div class="ext-bar"><div class="ext-bar-fill" style="width: 4.9070828648898885%"></div></div></td>
+                </tr>
+                <tr>
+                  <td><code>.ts</code></td>
+                  <td>4</td>
+                  <td>2.19 KB</td>
+                  <td>3.72%</td>
+                  <td><div class="ext-bar"><div class="ext-bar-fill" style="width: 3.715032074598241%"></div></div></td>
+                </tr>
+                <tr>
+                  <td><code>.md</code></td>
+                  <td>2</td>
+                  <td>504 B</td>
+                  <td>0.83%</td>
+                  <td><div class="ext-bar"><div class="ext-bar-fill" style="width: 0.8332782223397924%"></div></div></td>
+                </tr>
+                <tr>
+                  <td><code>.csv</code></td>
+                  <td>2</td>
+                  <td>338 B</td>
+                  <td>0.56%</td>
+                  <td><div class="ext-bar"><div class="ext-bar-fill" style="width: 0.5588254745056545%"></div></div></td>
+                </tr>
+                <tr>
+                  <td><code>(no extension)</code></td>
+                  <td>1</td>
+                  <td>48 B</td>
+                  <td>0.08%</td>
+                  <td><div class="ext-bar"><div class="ext-bar-fill" style="width: 0.07935983069902784%"></div></div></td>
+                </tr>
+          </tbody>
+        </table>
+      </div>
+
+      
+      <div class="section">
+        <h2>🎯 精确重复文件</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">重复文件数</div>
+            <div class="value">22</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">重复组数</div>
+            <div class="value">8</div>
+          </div>
+          <div class="stat-card" style="border-left-color: #c53030;">
+            <div class="label">可释放空间</div>
+            <div class="value" style="color: #c53030;">29.18 KB</div>
+          </div>
+        </div>
+
+        
+          
+          <div class="duplicate-group">
+            <div class="group-header">
+              <span class="group-title">组 1</span>
+              <span class="group-size">20 KB 可释放</span>
+            </div>
+            <div><span class="hash">5ef7ffaabfcc93abc23233975ca8085b2b09a554843382bbb5ef73b987e33883</span></div>
+            <div style="margin: 10px 0; color: #666; font-size: 13px;">
+              文件大小: 10 KB | 共 3 个文件
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>文件路径</th>
+                  <th>修改时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                <tr>
+                  <td>1</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\bin\data.bin</code></td>
+                  <td>2026/6/7 15:12:26</td>
+                  <td><span class="keep">✓ 保留</span></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\bin\data_copy.bin</code></td>
+                  <td>2026/6/7 15:12:26</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\bin\backup\data_backup.bin</code></td>
+                  <td>2026/6/7 15:12:26</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="duplicate-group">
+            <div class="group-header">
+              <span class="group-title">组 2</span>
+              <span class="group-size">4.56 KB 可释放</span>
+            </div>
+            <div><span class="hash">e7fc4f50ee3665440d29b19f6c44f6482996d0fcf6cd255cd182e6cc0427b4a8</span></div>
+            <div style="margin: 10px 0; color: #666; font-size: 13px;">
+              文件大小: 1.52 KB | 共 4 个文件
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>文件路径</th>
+                  <th>修改时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                <tr>
+                  <td>1</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\documents\report.txt</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="keep">✓ 保留</span></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\documents\report_copy.txt</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\documents\backup\report_backup_2024.txt</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\archive\old_report.txt</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="duplicate-group">
+            <div class="group-header">
+              <span class="group-title">组 3</span>
+              <span class="group-size">1.41 KB 可释放</span>
+            </div>
+            <div><span class="hash">318e6bdbdd647f1941e2d1627c894d1126ecaf959e8b553158f8561d21a12fff</span></div>
+            <div style="margin: 10px 0; color: #666; font-size: 13px;">
+              文件大小: 722 B | 共 3 个文件
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>文件路径</th>
+                  <th>修改时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                <tr>
+                  <td>1</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\data\config.json</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="keep">✓ 保留</span></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\data\config_backup.json</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\config\settings.json</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="duplicate-group">
+            <div class="group-header">
+              <span class="group-title">组 4</span>
+              <span class="group-size">1.14 KB 可释放</span>
+            </div>
+            <div><span class="hash">65b5460105af227e7718908ddb01290e82a6d0fe44d90fd1230ddf63e71fb4e8</span></div>
+            <div style="margin: 10px 0; color: #666; font-size: 13px;">
+              文件大小: 583 B | 共 3 个文件
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>文件路径</th>
+                  <th>修改时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                <tr>
+                  <td>1</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\photo_copy.png</code></td>
+                  <td>2026/6/7 15:12:26</td>
+                  <td><span class="keep">✓ 保留</span></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\photo.png</code></td>
+                  <td>2026/6/7 15:12:26</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\backup\photo_backup.png</code></td>
+                  <td>2026/6/7 15:12:26</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="duplicate-group">
+            <div class="group-header">
+              <span class="group-title">组 5</span>
+              <span class="group-size">1.1 KB 可释放</span>
+            </div>
+            <div><span class="hash">3cd23d6110980e0b056c73ec3b1b179b326f807fae342a21f5703c05eb267b29</span></div>
+            <div style="margin: 10px 0; color: #666; font-size: 13px;">
+              文件大小: 562 B | 共 3 个文件
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>文件路径</th>
+                  <th>修改时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                <tr>
+                  <td>1</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\src\utils.ts</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="keep">✓ 保留</span></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\src\utils_copy.ts</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\lib\utils.old.ts</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="duplicate-group">
+            <div class="group-header">
+              <span class="group-title">组 6</span>
+              <span class="group-size">572 B 可释放</span>
+            </div>
+            <div><span class="hash">de7c25a8b21c6d27d4051ed4948cdf81fe9f9f664c385111c60de65ed4810c36</span></div>
+            <div style="margin: 10px 0; color: #666; font-size: 13px;">
+              文件大小: 572 B | 共 2 个文件
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>文件路径</th>
+                  <th>修改时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                <tr>
+                  <td>1</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\red_image.png</code></td>
+                  <td>2026/6/7 15:12:26</td>
+                  <td><span class="keep">✓ 保留</span></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\red_image_copy.png</code></td>
+                  <td>2026/6/7 15:12:26</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="duplicate-group">
+            <div class="group-header">
+              <span class="group-title">组 7</span>
+              <span class="group-size">252 B 可释放</span>
+            </div>
+            <div><span class="hash">9a26e70ecb8208bf61e8ed7fb0f803850d05cb511a81d0a82cd41111c2045f19</span></div>
+            <div style="margin: 10px 0; color: #666; font-size: 13px;">
+              文件大小: 252 B | 共 2 个文件
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>文件路径</th>
+                  <th>修改时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                <tr>
+                  <td>1</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\README.md</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="keep">✓ 保留</span></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\docs\README.md</code></td>
+                  <td>2026/6/7 15:12:25</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="duplicate-group">
+            <div class="group-header">
+              <span class="group-title">组 8</span>
+              <span class="group-size">169 B 可释放</span>
+            </div>
+            <div><span class="hash">fb52282ca5d6e781c9f71f81139c977e10c9cafae932d7cd147715b1d25eb5f5</span></div>
+            <div style="margin: 10px 0; color: #666; font-size: 13px;">
+              文件大小: 169 B | 共 2 个文件
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>文件路径</th>
+                  <th>修改时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                <tr>
+                  <td>1</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\data\report.csv</code></td>
+                  <td>2026/6/7 15:12:26</td>
+                  <td><span class="keep">✓ 保留</span></td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\data\report_copy.csv</code></td>
+                  <td>2026/6/7 15:12:26</td>
+                  <td><span class="delete">✗ 删除</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          
+        
+      </div>
+
+      
+      <div class="section">
+        <h2>🔍 近似重复文件</h2>
+
+        
+        <h3>📝 文本近似重复 (5 组)</h3>
+        
+        <div class="duplicate-group" style="background: #f7fafc; border-color: #bee3f8;">
+          <div class="group-header">
+            <span class="group-title" style="color: #2b6cb0;">文本组 1</span>
+            <span class="group-size" style="color: #2c5282;">平均相似度 100.0%</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>文件路径</th>
+                <th>相似度</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\data\report_copy.csv</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\data\report.csv</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="duplicate-group" style="background: #f7fafc; border-color: #bee3f8;">
+          <div class="group-header">
+            <span class="group-title" style="color: #2b6cb0;">文本组 2</span>
+            <span class="group-size" style="color: #2c5282;">平均相似度 100.0%</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>文件路径</th>
+                <th>相似度</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\README.md</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\docs\README.md</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="duplicate-group" style="background: #f7fafc; border-color: #bee3f8;">
+          <div class="group-header">
+            <span class="group-title" style="color: #2b6cb0;">文本组 3</span>
+            <span class="group-size" style="color: #2c5282;">平均相似度 100.0%</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>文件路径</th>
+                <th>相似度</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\lib\utils.old.ts</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\src\utils.ts</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\src\utils_copy.ts</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\src\similarity.ts</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="duplicate-group" style="background: #f7fafc; border-color: #bee3f8;">
+          <div class="group-header">
+            <span class="group-title" style="color: #2b6cb0;">文本组 4</span>
+            <span class="group-size" style="color: #2c5282;">平均相似度 100.0%</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>文件路径</th>
+                <th>相似度</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\data\config.json</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\data\config_backup.json</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\data\config_v2.json</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\config\settings.json</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="duplicate-group" style="background: #f7fafc; border-color: #bee3f8;">
+          <div class="group-header">
+            <span class="group-title" style="color: #2b6cb0;">文本组 5</span>
+            <span class="group-size" style="color: #2c5282;">平均相似度 100.0%</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>文件路径</th>
+                <th>相似度</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\archive\old_report.txt</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\documents\backup\report_backup_2024.txt</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\documents\report.txt</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\documents\report_copy.txt</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\documents\report_v2_similar.txt</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\documents\report_v2.txt</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+            </tbody>
+          </table>
+        </div>
+        
+
+        
+        <h3>🖼️ 图像近似重复 (1 组)</h3>
+        
+        <div class="duplicate-group" style="background: #faf5ff; border-color: #d6bcfa;">
+          <div class="group-header">
+            <span class="group-title" style="color: #805ad5;">图像组 1</span>
+            <span class="group-size" style="color: #553c9a;">平均相似度 100.0%</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>文件路径</th>
+                <th>相似度</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\green_image.png</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\photo.png</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\photo_copy.png</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\photo_similar.png</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\red_image.png</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\red_image_copy.png</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+                <tr>
+                  <td><code>E:\solo\项目\lym-00017\sample-data\images\backup\photo_backup.png</code></td>
+                  <td><span class="similarity sim-high">100.0%</span></td>
+                </tr>
+            </tbody>
+          </table>
+        </div>
+        
+
+        
+      </div>
+
+      
+
+      <div class="section">
+        <h2>⚙️ 扫描配置</h2>
+        <pre>{
+  &quot;gitignore&quot;: true,
+  &quot;exact&quot;: true,
+  &quot;report&quot;: &quot;html&quot;,
+  &quot;threshold&quot;: &quot;85&quot;,
+  &quot;concurrency&quot;: 4,
+  &quot;near&quot;: true,
+  &quot;output&quot;: &quot;test-report.html&quot;
+}</pre>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
